@@ -4,7 +4,7 @@ const cors = require('cors');
 
 // --- IMPORT MODELS ---
 const Food = require('./models/Food');
-const Staff = require('./models/Staff');
+const Staff = require('./models/staff');
 const Booking = require('./models/Booking');
 const Customer = require('./models/Customer');
 const Order = require('./models/Order'); // NEW: Order Model
