@@ -31,12 +31,12 @@ const Navbar = () => {
 
         {/* NEW: Staff Login Button (Links to Admin Dashboard) */}
         <Link 
-          to="/admin" 
-          className="flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-black transition border border-gray-300 px-3 py-2 rounded-lg bg-gray-50 hover:bg-gray-200"
-        >
-           <FaUserTie className="text-lg" />
-           <span className="hidden md:inline">Staff Login</span>
-        </Link>
+  to="/login"  
+  className="flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-black transition border border-gray-300 px-3 py-2 rounded-lg bg-gray-50 hover:bg-gray-200"
+>
+   <FaUserTie className="text-lg" />
+   <span className="hidden md:inline">Staff Login</span>
+</Link>
 
       </div>
 

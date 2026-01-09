@@ -8,6 +8,7 @@ import BookTable from './pages/BookTable';
 import About from './pages/About';
 // Top par import karein
 import Admin from './pages/Admin';
+import Login from './pages/Login';
 
 // Routes ke andar add karein
 
@@ -24,6 +25,7 @@ function App() {
           <Route path="/book" element={<BookTable />} />
           <Route path="/about" element={<About />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/login" element={<Login />} />
         </Routes>
         <Footer /> {/* ADD THIS AT THE BOTTOM */}
       </div>
