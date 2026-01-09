@@ -1,214 +1,183 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { FaUserTie, FaUtensils, FaClock, FaCheckCircle, FaSignOutAlt, FaChartLine } from 'react-icons/fa';
+import axios from 'axios'; // API call ke liye
+import { FaUserTie, FaUtensils, FaClock, FaExclamationTriangle, FaUserPlus, FaSignOutAlt } from 'react-icons/fa';
 
 const Admin = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
+  const [staff, setStaff] = useState([]); // Real Staff Data
+  const [orders, setOrders] = useState([]); // Real/Dummy Orders
+  
+  // New Staff Form State
+  const [newStaff, setNewStaff] = useState({ name: "", username: "", password: "", role: "Waiter" });
 
-  // --- 1. SECURITY & AUTHENTICATION CHECK ---
+  // 1. Load User & Data
   useEffect(() => {
-    // Check if user is saved in Local Storage
     const user = JSON.parse(localStorage.getItem("user"));
-    
     if (!user) {
-      // If no user found, redirect to Login Page immediately
       navigate("/login");
     } else {
-      // If user found, save to state to display name
       setCurrentUser(user);
+      fetchStaff(); // Load Staff List
     }
-  }, [navigate]);
+  }, []);
 
-  // --- 2. LOGOUT FUNCTION ---
+  // Fetch Staff from DB
+  const fetchStaff = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/staff');
+      setStaff(res.data);
+    } catch (err) {
+      console.error("Error fetching staff");
+    }
+  };
+
+  // 2. Attendance Logic (Automatic Late Detection)
+  const getAttendanceStatus = (lastLoginDate) => {
+    if (!lastLoginDate) return <span className="text-gray-400">Not Logged In</span>;
+    
+    const loginTime = new Date(lastLoginDate);
+    const lateCutoff = new Date(lastLoginDate); // Create date object
+    lateCutoff.setHours(9, 15, 0); // Set Cutoff time 9:15 AM
+    
+    // Compare Time
+    if (loginTime.getHours() > 9 || (loginTime.getHours() === 9 && loginTime.getMinutes() > 15)) {
+       return <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1"><FaExclamationTriangle/> LATE (Fined)</span>;
+    }
+    return <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">On Time</span>;
+  };
+
+  // 3. Add New Staff Function
+  const handleAddStaff = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post('http://localhost:5000/api/staff/create', newStaff);
+      alert("✅ New Staff Member Added Successfully!");
+      fetchStaff(); // Refresh List
+      setNewStaff({ name: "", username: "", password: "", role: "Waiter" }); // Reset Form
+    } catch (err) {
+      alert("Failed to add staff. Username might be taken.");
+    }
+  };
+
   const handleLogout = () => {
-    localStorage.removeItem("user"); // Clear session
-    navigate("/login"); // Go to Login
+    localStorage.removeItem("user");
+    navigate("/login");
   };
 
-  // --- 3. DASHBOARD DATA (Simulated for Viva) ---
-  
-  // Staff Data
-  const [staff] = useState([
-    { id: 1, name: "Ramesh Kumar", role: "Head Chef", shift: "Morning", status: "Active", inTime: "08:55 AM" },
-    { id: 2, name: "Suresh Singh", role: "Waiter", shift: "Evening", status: "Late", inTime: "04:15 PM" },
-    { id: 3, name: "Priya Sharma", role: "Manager", shift: "Full Day", status: "Active", inTime: "09:00 AM" },
-    { id: 4, name: "Rahul Verma", role: "Waiter", shift: "Evening", status: "On Leave", inTime: "--" },
-  ]);
-
-  // Live Orders Data
-  const [orders, setOrders] = useState([
-    { id: 101, table: "Table 4", item: "Paneer Tikka Pizza", time: "10 mins ago", status: "Preparing" },
-    { id: 102, table: "Table 1", item: "Maharaja Burger", time: "2 mins ago", status: "Pending" },
-    { id: 103, table: "Table 2", item: "Choco Lava Cake", time: "Just now", status: "Pending" },
-  ]);
-
-  // Logic to update Order Status (Interactive Feature)
-  const updateStatus = (id) => {
-    setOrders(orders.map(order => {
-      if (order.id === id) {
-        if (order.status === "Pending") return { ...order, status: "Preparing" };
-        if (order.status === "Preparing") return { ...order, status: "Ready to Serve" };
-      }
-      return order;
-    }));
-  };
-
-  // Prevent rendering if not logged in
   if (!currentUser) return null;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 md:p-8">
+    <div className="min-h-screen bg-gray-100 p-6">
       
-      {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8 bg-white p-6 rounded-xl shadow-sm">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8 bg-white p-6 rounded-xl shadow-sm">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-            <FaChartLine className="text-orange-600"/> Dashboard
-          </h1>
-          <p className="text-gray-500 mt-1">
-            Welcome back, <span className="font-bold text-orange-600 text-lg">{currentUser.name}</span> 
-            <span className="text-xs bg-gray-200 px-2 py-1 rounded ml-2 uppercase">{currentUser.role}</span>
-          </p>
+          <h1 className="text-3xl font-bold text-gray-800">Admin Control Center</h1>
+          <p className="text-gray-500">Managing: <span className="text-orange-600 font-bold">OmniFood Restaurant</span></p>
         </div>
-        
-        <button 
-          onClick={handleLogout}
-          className="mt-4 md:mt-0 bg-red-50 text-red-600 border border-red-200 px-5 py-2 rounded-lg font-bold hover:bg-red-600 hover:text-white transition flex items-center gap-2"
-        >
+        <button onClick={handleLogout} className="bg-red-500 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-600">
           <FaSignOutAlt /> Logout
         </button>
       </div>
 
-      {/* QUICK STATS CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500">
-          <h3 className="text-gray-500 text-sm font-bold uppercase">Total Staff</h3>
-          <p className="text-3xl font-bold text-gray-800">12</p>
-        </div>
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-green-500">
-          <h3 className="text-gray-500 text-sm font-bold uppercase">Present Today</h3>
-          <p className="text-3xl font-bold text-gray-800">10</p>
-        </div>
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-red-500">
-          <h3 className="text-gray-500 text-sm font-bold uppercase">Late / Leave</h3>
-          <p className="text-3xl font-bold text-gray-800">2</p>
-        </div>
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-orange-500">
-          <h3 className="text-gray-500 text-sm font-bold uppercase">Active Orders</h3>
-          <p className="text-3xl font-bold text-gray-800">{orders.filter(o => o.status !== 'Ready to Serve').length}</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* MODULE 1: STAFF ATTENDANCE TABLE */}
-        <div className="bg-white p-6 rounded-xl shadow-lg">
-          <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-gray-700">
-            <FaUserTie className="text-blue-600"/> Staff Attendance
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 text-gray-500 text-sm uppercase tracking-wider">
-                  <th className="p-3">Name</th>
-                  <th className="p-3">Role</th>
-                  <th className="p-3">In-Time</th>
-                  <th className="p-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {staff.map((person) => (
-                  <tr key={person.id} className="border-b hover:bg-gray-50 transition">
-                    <td className="p-3 font-semibold text-gray-700">{person.name}</td>
-                    <td className="p-3 text-sm text-gray-500">{person.role}</td>
-                    <td className="p-3 font-mono text-sm">{person.inTime}</td>
-                    <td className="p-3">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold 
-                        ${person.status === 'Active' ? 'bg-green-100 text-green-700' : 
-                          person.status === 'Late' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
-                        {person.status}
-                      </span>
-                    </td>
+        {/* LEFT COLUMN: STAFF MANAGEMENT & ATTENDANCE */}
+        <div className="lg:col-span-2 space-y-8">
+          
+          {/* 1. STAFF LIST & ATTENDANCE */}
+          <div className="bg-white p-6 rounded-xl shadow-lg">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <FaUserTie className="text-blue-600"/> Staff Attendance & Performance
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-100 text-gray-600 uppercase text-sm">
+                    <th className="p-3">Name</th>
+                    <th className="p-3">Role</th>
+                    <th className="p-3">Last Login</th>
+                    <th className="p-3">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {staff.map((person) => (
+                    <tr key={person._id} className="border-b hover:bg-gray-50">
+                      <td className="p-3 font-bold text-gray-700">{person.name}</td>
+                      <td className="p-3 text-sm">{person.role}</td>
+                      <td className="p-3 text-xs font-mono">
+                        {person.lastLogin ? new Date(person.lastLogin).toLocaleString() : "--"}
+                      </td>
+                      <td className="p-3">
+                        {getAttendanceStatus(person.lastLogin)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
 
-        {/* MODULE 2: LIVE KITCHEN ORDERS (KDS) */}
-        <div className="bg-white p-6 rounded-xl shadow-lg">
-          <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-gray-700">
-            <FaUtensils className="text-orange-600"/> Live Kitchen Orders
-          </h2>
-          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-            {orders.map((order) => (
-              <motion.div 
-                key={order.id} 
-                initial={{ opacity: 0, x: 20 }} 
-                animate={{ opacity: 1, x: 0 }}
-                className={`border p-4 rounded-lg flex justify-between items-center 
-                  ${order.status === 'Ready to Serve' ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200 shadow-sm'}`}
+          {/* 2. ADD NEW STAFF FORM */}
+          <div className="bg-white p-6 rounded-xl shadow-lg border-t-4 border-orange-500">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <FaUserPlus className="text-orange-600"/> Register New Employee
+            </h2>
+            <form onSubmit={handleAddStaff} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input 
+                type="text" placeholder="Full Name" required 
+                className="border p-2 rounded"
+                value={newStaff.name} onChange={e => setNewStaff({...newStaff, name: e.target.value})}
+              />
+              <select 
+                className="border p-2 rounded"
+                value={newStaff.role} onChange={e => setNewStaff({...newStaff, role: e.target.value})}
               >
-                <div>
-                  <h4 className="font-bold text-lg text-gray-800">{order.table}</h4>
-                  <p className="text-gray-600 font-medium">{order.item}</p>
-                  <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
-                    <FaClock/> {order.time}
-                  </p>
-                </div>
-                
-                <div className="text-right flex flex-col items-end gap-2">
-                  <span className={`text-xs font-bold uppercase tracking-wider 
-                    ${order.status === 'Pending' ? 'text-red-500' : 
-                    order.status === 'Preparing' ? 'text-yellow-600' : 'text-green-600'}`}>
-                    {order.status}
-                  </span>
-                  
-                  {/* Action Button */}
-                  {order.status !== 'Ready to Serve' ? (
-                    <button 
-                      onClick={() => updateStatus(order.id)}
-                      className={`text-xs px-4 py-2 rounded font-bold text-white transition shadow-md
-                        ${order.status === 'Pending' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}`}
-                    >
-                      {order.status === 'Pending' ? 'Start Cooking' : 'Mark Ready'}
-                    </button>
-                  ) : (
-                    <div className="text-green-600 text-xl"><FaCheckCircle /></div>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-            
-            {orders.length === 0 && (
-              <p className="text-center text-gray-400 py-10">No active orders right now.</p>
-            )}
+                <option value="Waiter">Waiter</option>
+                <option value="Chef">Chef</option>
+                <option value="Manager">Manager</option>
+              </select>
+              <input 
+                type="text" placeholder="Create Username" required 
+                className="border p-2 rounded"
+                value={newStaff.username} onChange={e => setNewStaff({...newStaff, username: e.target.value})}
+              />
+              <input 
+                type="text" placeholder="Set Password" required 
+                className="border p-2 rounded"
+                value={newStaff.password} onChange={e => setNewStaff({...newStaff, password: e.target.value})}
+              />
+              <button className="col-span-1 md:col-span-2 bg-gray-800 text-white py-2 rounded hover:bg-black font-bold">
+                + Add Staff Member
+              </button>
+            </form>
+          </div>
+
+        </div>
+
+        {/* RIGHT COLUMN: KITCHEN ORDERS (Dummy Data for now to keep UI full) */}
+        <div className="bg-white p-6 rounded-xl shadow-lg h-fit">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <FaUtensils className="text-green-600"/> Kitchen Live Status
+          </h2>
+          <div className="space-y-4">
+            <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
+               <h4 className="font-bold">Table 5</h4>
+               <p className="text-sm">2x Masala Dosa</p>
+               <span className="text-xs text-orange-600 font-bold">Preparing...</span>
+            </div>
+            <div className="bg-green-50 p-3 rounded border border-green-200">
+               <h4 className="font-bold">Table 2</h4>
+               <p className="text-sm">1x Cold Coffee</p>
+               <span className="text-xs text-green-600 font-bold">Ready to Serve</span>
+            </div>
+            <p className="text-xs text-gray-400 text-center mt-4">Real-time order sync active</p>
           </div>
         </div>
 
       </div>
-
-      {/* MODULE 3: MANAGER CONTROLS */}
-      <div className="mt-8 bg-gray-900 text-white p-8 rounded-2xl shadow-xl">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <div>
-            <h2 className="text-2xl font-bold flex items-center gap-2">🎉 Manager's Control Panel</h2>
-            <p className="text-gray-400 mt-1">Update "Today's Special" on the main Menu page directly from here.</p>
-          </div>
-          <button className="bg-orange-600 hover:bg-orange-700 px-8 py-3 rounded-lg font-bold shadow-lg transform hover:scale-105 transition">
-            Set New Offer
-          </button>
-        </div>
-        
-        <div className="mt-6 p-4 bg-gray-800 rounded-lg border border-gray-700 inline-block">
-          <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Active Offer</p>
-          <p className="text-lg font-mono text-orange-400">Paneer Tikka Pizza @ ₹399</p>
-        </div>
-      </div>
-
     </div>
   );
 };
