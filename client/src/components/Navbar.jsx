@@ -18,6 +18,7 @@ const Navbar = () => {
           <Link to="/" className="hover:text-orange-600 transition">Home</Link>
           <Link to="/menu" className="hover:text-orange-600 transition">Menu</Link>
           <Link to="/book" className="hover:text-orange-600 transition">Book Table</Link>
+          <Link to="/about" className="hover:text-orange-600 transition">About Us</Link> {/* NEW LINK */}
         </div>
 
         {/* Cart Button (Future Feature) */}
