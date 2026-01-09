@@ -15,6 +15,7 @@ import Admin from './pages/Admin';
 import Login from './pages/Login'; // Staff Login
 import Cart from './pages/Cart';   // Customer Cart
 import Auth from './pages/Auth';   // Customer Login/Signup
+import MyOrders from './pages/MyOrders';
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
             {/* Admin/Staff Pages */}
             <Route path="/login" element={<Login />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/my-orders" element={<MyOrders />} />
           </Routes>
           <Footer />
         </div>

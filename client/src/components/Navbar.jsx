@@ -1,7 +1,7 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // useNavigate add kiya
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { FaUtensils, FaShoppingCart, FaUserTie, FaUser } from 'react-icons/fa';
+import { FaUtensils, FaShoppingCart, FaUserTie, FaUser, FaBoxOpen, FaSignOutAlt } from 'react-icons/fa';
 
 const Navbar = () => {
   const { cart } = useCart();
@@ -19,43 +19,63 @@ const Navbar = () => {
   return (
     <nav className="bg-white shadow-lg px-6 py-4 flex justify-between items-center sticky top-0 z-50">
       
+      {/* --- LOGO --- */}
       <Link to="/" className="flex items-center gap-2 text-2xl font-black italic text-gray-800">
         <FaUtensils className="text-orange-600" />
         <span>OmniFood</span>
       </Link>
 
+      {/* --- MIDDLE NAVIGATION --- */}
       <div className="hidden md:flex items-center gap-8 font-medium text-gray-600">
-        <Link to="/" className="hover:text-orange-600">Home</Link>
-        <Link to="/menu" className="hover:text-orange-600">Menu</Link>
-        <Link to="/book" className="hover:text-orange-600">Book Table</Link>
-        <Link to="/about" className="hover:text-orange-600">About Us</Link>
+        <Link to="/" className="hover:text-orange-600 transition">Home</Link>
+        <Link to="/menu" className="hover:text-orange-600 transition">Menu</Link>
+        <Link to="/book" className="hover:text-orange-600 transition">Book Table</Link>
+        <Link to="/about" className="hover:text-orange-600 transition">About Us</Link>
       </div>
 
-      <div className="flex items-center gap-3">
+      {/* --- RIGHT ACTIONS --- */}
+      <div className="flex items-center gap-4">
         
-        {/* CART BUTTON */}
+        {/* 1. CART BUTTON */}
         <Link to="/cart">
           <button className="bg-orange-600 text-white px-4 py-2 rounded-full flex items-center gap-2 hover:bg-orange-700 transition shadow-lg relative">
             <FaShoppingCart />
-            <span>{cart.length}</span>
+            <span className="font-bold">{cart.length}</span>
           </button>
         </Link>
 
-        {/* CUSTOMER LOGIN / PROFILE */}
+        {/* 2. CUSTOMER SECTION (Login/Profile) */}
         {customer ? (
-          <div className="flex items-center gap-2 border px-3 py-2 rounded-lg bg-gray-50">
-             <FaUser className="text-orange-600"/>
-             <span className="font-bold text-sm">{customer.name.split(' ')[0]}</span>
-             <button onClick={handleCustomerLogout} className="text-xs text-red-500 hover:underline ml-2">Logout</button>
+          <div className="flex items-center gap-4">
+            
+            {/* My Orders Link */}
+            <Link to="/my-orders" className="flex items-center gap-1 text-sm font-bold text-gray-600 hover:text-orange-600 transition">
+               <FaBoxOpen /> Orders
+            </Link>
+
+            {/* Profile & Logout */}
+            <div className="flex items-center gap-2 border-l pl-4">
+               <div className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full">
+                 <FaUser className="text-orange-600"/>
+                 <span className="font-bold text-sm text-gray-700">{customer.name.split(' ')[0]}</span>
+               </div>
+               <button 
+                 onClick={handleCustomerLogout} 
+                 className="text-gray-400 hover:text-red-500 transition" 
+                 title="Logout"
+               >
+                 <FaSignOutAlt />
+               </button>
+            </div>
           </div>
         ) : (
-          <Link to="/auth" className="text-sm font-bold text-gray-700 hover:text-orange-600 border border-gray-300 px-3 py-2 rounded-lg">
+          <Link to="/auth" className="text-sm font-bold text-gray-700 hover:text-orange-600 border border-gray-300 px-4 py-2 rounded-full hover:border-orange-600 transition">
              User Login
           </Link>
         )}
 
-        {/* STAFF LOGIN (ADMIN) */}
-        <Link to="/login" className="text-xs font-bold text-gray-400 hover:text-black flex items-center gap-1">
+        {/* 3. STAFF LOGIN (Admin) */}
+        <Link to="/login" className="hidden md:flex text-xs font-bold text-gray-400 hover:text-black items-center gap-1 ml-2">
            <FaUserTie /> Staff
         </Link>
 
@@ -63,4 +83,5 @@ const Navbar = () => {
     </nav>
   );
 };
+
 export default Navbar;
