@@ -4,9 +4,10 @@ const cors = require('cors');
 
 // --- IMPORT MODELS ---
 const Food = require('./models/Food');
-const Staff = require('./models/staff');
+const Staff = require('./models/Staff');
 const Booking = require('./models/Booking');
-const Customer = require('./models/Customer'); // NEW: Customer Model
+const Customer = require('./models/Customer');
+const Order = require('./models/Order'); // NEW: Order Model
 
 const app = express();
 
@@ -15,7 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 // --- DATABASE CONNECTION ---
-// Using Direct Local Link (No .env needed for Viva)
+// Using Direct Local Link
 mongoose.connect("mongodb://127.0.0.1:27017/omnifood")
   .then(() => console.log("✅ MongoDB Connected Successfully"))
   .catch((err) => console.log("❌ DB Connection Error:", err));
@@ -54,7 +55,7 @@ app.put('/api/foods/special/:id', async (req, res) => {
   }
 });
 
-// --- 2. CUSTOMER ROUTES (NEW) ---
+// --- 2. CUSTOMER ROUTES ---
 
 // Customer Signup
 app.post('/api/customer/register', async (req, res) => {
@@ -63,7 +64,6 @@ app.post('/api/customer/register', async (req, res) => {
     await newCustomer.save();
     res.status(201).json(newCustomer);
   } catch (error) {
-    // Likely duplicate email error
     res.status(500).json("Email already exists or Server Error");
   }
 });
@@ -72,12 +72,9 @@ app.post('/api/customer/register', async (req, res) => {
 app.post('/api/customer/login', async (req, res) => {
   try {
     const user = await Customer.findOne({ email: req.body.email });
-    
-    // Simple Password Check (No Encryption for College Project)
     if (!user || user.password !== req.body.password) {
       return res.status(400).json("Invalid Credentials");
     }
-    
     res.status(200).json(user);
   } catch (error) {
     res.status(500).json(error);
@@ -128,25 +125,32 @@ app.post('/api/staff/create', async (req, res) => {
   }
 });
 
-// --- 4. ORDER & BOOKING ROUTES ---
+// --- 4. ORDER ROUTES (UPDATED) ---
 
-// Place New Order (Cart Checkout)
+// Place New Order (Save to DB)
 app.post('/api/orders', async (req, res) => {
   try {
-    // In a real app, we would save to an Order Model here.
-    // For now, we log it to console to show the client "Backend is receiving data".
-    console.log("📦 New Order Received!");
-    console.log("Items:", req.body.items);
-    console.log("Total:", req.body.total);
-    
-    res.status(201).json({ 
-      message: "Order Placed Successfully", 
-      orderId: Math.floor(Math.random() * 10000) 
-    });
+    const newOrder = new Order(req.body);
+    const savedOrder = await newOrder.save();
+    console.log("📦 Order Saved to DB:", savedOrder._id);
+    res.status(201).json(savedOrder);
   } catch (error) {
     res.status(500).json(error);
   }
 });
+
+// Get Orders by Customer Email (For 'My Orders' Page)
+app.get('/api/orders/:email', async (req, res) => {
+  try {
+    // Find orders for this email and sort by latest date
+    const orders = await Order.find({ customerEmail: req.params.email }).sort({ date: -1 });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
+// --- 5. BOOKING ROUTES ---
 
 // Book a Table
 app.post('/api/bookings', async (req, res) => {
