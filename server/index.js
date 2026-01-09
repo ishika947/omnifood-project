@@ -1,29 +1,32 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-// const dotenv = require('dotenv'); // Abhi iski zaroorat nahi hai
 
-// Import Models
+// --- IMPORT MODELS ---
 const Food = require('./models/Food');
-const Staff = require('./models/staff'); 
-const Booking = require('./models/Booking'); 
+const Staff = require('./models/staff');
+const Booking = require('./models/Booking');
+const Customer = require('./models/Customer'); // NEW: Customer Model
 
-// dotenv.config(); // Ise comment kar diya
 const app = express();
 
-// Middleware
+// --- MIDDLEWARE ---
 app.use(cors());
 app.use(express.json());
 
-// --- DATABASE CONNECTION (DIRECT FIX) ---
-// Yahan humne process.env hata diya hai taaki "undefined" error na aaye
+// --- DATABASE CONNECTION ---
+// Using Direct Local Link (No .env needed for Viva)
 mongoose.connect("mongodb://127.0.0.1:27017/omnifood")
   .then(() => console.log("✅ MongoDB Connected Successfully"))
   .catch((err) => console.log("❌ DB Connection Error:", err));
 
-// --- ROUTES ---
+// ==========================================
+//               API ROUTES
+// ==========================================
 
-// 1. GET: Fetch Menu (Foods)
+// --- 1. FOOD & MENU ROUTES ---
+
+// Get All Foods
 app.get('/api/foods', async (req, res) => {
   try {
     const foods = await Food.find();
@@ -33,51 +36,13 @@ app.get('/api/foods', async (req, res) => {
   }
 });
 
-// 2. POST: Book a Table
-app.post('/api/bookings', async (req, res) => {
-  try {
-    const newBooking = new Booking(req.body);
-    const savedBooking = await newBooking.save();
-    res.status(201).json(savedBooking);
-  } catch (error) {
-    res.status(500).json("Booking Failed");
-  }
-});
-
-// 3. POST: Staff Registration
-app.post('/api/staff/register', async (req, res) => {
-  try {
-    const newStaff = new Staff(req.body);
-    await newStaff.save();
-    res.status(201).json(newStaff);
-  } catch (error) {
-    res.status(500).json(error);
-  }
-});
-
-// 4. POST: Staff Login
-app.post('/api/staff/login', async (req, res) => {
-  try {
-    const user = await Staff.findOne({ username: req.body.username });
-    if (!user || user.password !== req.body.password) {
-      return res.status(400).json("Invalid Username or Password!");
-    }
-    user.lastLogin = Date.now();
-    await user.save();
-    res.status(200).json({ 
-      username: user.username, 
-      role: user.role, 
-      name: user.name 
-    });
-  } catch (error) {
-    res.status(500).json(error);
-  }
-});
-
-// 5. UPDATE: Set Today's Special Offer
+// Update Special Offer (Admin Feature)
 app.put('/api/foods/special/:id', async (req, res) => {
   try {
+    // Reset all offers first
     await Food.updateMany({}, { isSpecialOffer: false });
+    
+    // Set new offer
     const updatedFood = await Food.findByIdAndUpdate(
       req.params.id, 
       { isSpecialOffer: true }, 
@@ -89,19 +54,60 @@ app.put('/api/foods/special/:id', async (req, res) => {
   }
 });
 
-// 6. POST: Place New Order
-app.post('/api/orders', async (req, res) => {
+// --- 2. CUSTOMER ROUTES (NEW) ---
+
+// Customer Signup
+app.post('/api/customer/register', async (req, res) => {
   try {
-    console.log("New Order Received:", req.body);
-    res.status(201).json({ message: "Order Placed Successfully", orderId: Math.floor(Math.random() * 1000) });
+    const newCustomer = new Customer(req.body);
+    await newCustomer.save();
+    res.status(201).json(newCustomer);
+  } catch (error) {
+    // Likely duplicate email error
+    res.status(500).json("Email already exists or Server Error");
+  }
+});
+
+// Customer Login
+app.post('/api/customer/login', async (req, res) => {
+  try {
+    const user = await Customer.findOne({ email: req.body.email });
+    
+    // Simple Password Check (No Encryption for College Project)
+    if (!user || user.password !== req.body.password) {
+      return res.status(400).json("Invalid Credentials");
+    }
+    
+    res.status(200).json(user);
   } catch (error) {
     res.status(500).json(error);
   }
 });
 
-// ... Upar Login Route ke baad yeh add karein
+// --- 3. STAFF & ADMIN ROUTES ---
 
-// 7. GET: Get All Staff Members (For Admin Dashboard)
+// Staff Login
+app.post('/api/staff/login', async (req, res) => {
+  try {
+    const user = await Staff.findOne({ username: req.body.username });
+    if (!user || user.password !== req.body.password) {
+      return res.status(400).json("Invalid Username or Password!");
+    }
+    // Update Attendance Time
+    user.lastLogin = Date.now();
+    await user.save();
+    
+    res.status(200).json({ 
+      username: user.username, 
+      role: user.role, 
+      name: user.name 
+    });
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
+// Get All Staff (For Admin Dashboard)
 app.get('/api/staff', async (req, res) => {
   try {
     const staffMembers = await Staff.find();
@@ -111,7 +117,7 @@ app.get('/api/staff', async (req, res) => {
   }
 });
 
-// 8. POST: Create New Staff (Manager Adding Waiter)
+// Create New Staff (Manager Action)
 app.post('/api/staff/create', async (req, res) => {
   try {
     const newStaff = new Staff(req.body);
@@ -121,5 +127,38 @@ app.post('/api/staff/create', async (req, res) => {
     res.status(500).json("Error Creating Staff");
   }
 });
-const PORT = 5000; // Direct Port
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// --- 4. ORDER & BOOKING ROUTES ---
+
+// Place New Order (Cart Checkout)
+app.post('/api/orders', async (req, res) => {
+  try {
+    // In a real app, we would save to an Order Model here.
+    // For now, we log it to console to show the client "Backend is receiving data".
+    console.log("📦 New Order Received!");
+    console.log("Items:", req.body.items);
+    console.log("Total:", req.body.total);
+    
+    res.status(201).json({ 
+      message: "Order Placed Successfully", 
+      orderId: Math.floor(Math.random() * 10000) 
+    });
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
+// Book a Table
+app.post('/api/bookings', async (req, res) => {
+  try {
+    const newBooking = new Booking(req.body);
+    const savedBooking = await newBooking.save();
+    res.status(201).json(savedBooking);
+  } catch (error) {
+    res.status(500).json("Booking Failed");
+  }
+});
+
+// --- START SERVER ---
+const PORT = 5000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
