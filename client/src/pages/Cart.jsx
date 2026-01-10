@@ -44,8 +44,9 @@ const Cart = () => {
       };
 
       // 3. Send to Backend (Database)
-      await axios.post('http://localhost:5000/api/orders', orderData);
+      //await axios.post('http://localhost:5000/api/orders', orderData);
 
+      await axios.post('https://omnifood-project-cgkz.onrender.com/api/orders', orderData);
       // 4. Success Actions
       setProcessing(false);
       alert(`🎉 ORDER PLACED SUCCESSFULLY!\n\nThank you, ${customer.name}!`);

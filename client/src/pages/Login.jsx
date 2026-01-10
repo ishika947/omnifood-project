@@ -13,10 +13,10 @@ const Login = () => {
     e.preventDefault();
     try {
       // API Call to Backend
-      const res = await axios.post("http://localhost:5000/api/staff/login", {
-        username,
-        password,
-      });
+      const res = await axios.post("https://omnifood-project-cgkz.onrender.com/api/staff/login", {
+  username,
+  password,
+});
 
       // Save User to Local Storage (Session)
       localStorage.setItem("user", JSON.stringify(res.data));

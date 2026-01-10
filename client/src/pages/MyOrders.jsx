@@ -18,7 +18,8 @@ const MyOrders = () => {
 
   const fetchOrders = async (email) => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/orders/${email}`);
+     // const res = await axios.get(`http://localhost:5000/api/orders/${email}`);
+     const res = await axios.get(`https://omnifood-project-cgkz.onrender.com/api/orders/${email}`);
       setOrders(res.data);
     } catch (err) {
       console.error("Error fetching orders");

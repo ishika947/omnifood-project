@@ -106,7 +106,8 @@ const BookTable = () => {
 
   const handleBooking = async () => {
     try {
-      await axios.post('http://localhost:5000/api/bookings', formData);
+      //await axios.post('http://localhost:5000/api/bookings', formData);
+      await axios.post('https://omnifood-project-cgkz.onrender.com/api/bookings', formData);
       alert(`🎉 Table ${formData.tableNo} (${selectedZone}) Booked Successfully!`);
       navigate('/');
     } catch (err) {

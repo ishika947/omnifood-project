@@ -198,13 +198,15 @@ const Home = () => {
   const handleTrackOrder = async () => {
     if (!trackId) return alert("Please enter an Order ID");
     try {
-      const res = await axios.get(`http://localhost:5000/api/orders/track/${trackId}`);
+     // const res = await axios.get(`http://localhost:5000/api/orders/track/${trackId}`);
+     const res = await axios.get(`https://omnifood-project-cgkz.onrender.com/api/orders/track/${trackId}`);
       setOrderStatus(res.data.status); // e.g. "Cooking"
       setShowTrackModal(true);
     } catch (err) {
       alert("❌ Order Not Found! Please check your ID (e.g. from the Bill)");
     }
   };
+
 
   const getProgress = (status) => {
     if (status === "Pending") return 10;

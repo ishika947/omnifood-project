@@ -11,8 +11,9 @@ const Auth = () => {
     e.preventDefault();
     const endpoint = isLogin ? "/api/customer/login" : "/api/customer/register";
     try {
-      const res = await axios.post(`http://localhost:5000${endpoint}`, formData);
-      localStorage.setItem("customer", JSON.stringify(res.data)); // Save Customer Session
+     // const res = await axios.post(`http://localhost:5000${endpoint}`, formData);
+     const res = await axios.post(`https://omnifood-project-cgkz.onrender.com${endpoint}`, formData); 
+     localStorage.setItem("customer", JSON.stringify(res.data)); // Save Customer Session
       alert(isLogin ? "Welcome back!" : "Registration Successful!");
       navigate('/menu'); // Redirect to Menu
     } catch (err) {

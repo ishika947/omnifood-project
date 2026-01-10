@@ -157,7 +157,7 @@ const Menu = () => {
   useEffect(() => {
     const fetchFoods = async () => {
       try {
-        const { data } = await axios.get('http://localhost:5000/api/foods');
+        const { data } = await axios.get('https://omnifood-project-cgkz.onrender.com/api/foods');
         setFoods(data);
         setFilteredFoods(data);
         setLoading(false);

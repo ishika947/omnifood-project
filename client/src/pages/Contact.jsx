@@ -9,7 +9,8 @@ const Contact = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/contact', formData);
+      //await axios.post('http://localhost:5000/api/contact', formData);
+      await axios.post('https://omnifood-project-cgkz.onrender.com/api/contact', formData);
       setStatus("Message Sent! We will contact you soon.");
       setFormData({ name: "", email: "", message: "" });
     } catch (err) {
