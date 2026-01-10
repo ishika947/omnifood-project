@@ -15,7 +15,10 @@ import BookTable from './pages/BookTable'; // Table Booking Page
 // --- COMPONENTS ---
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import ChatBot from './components/ChatBot'; // 🤖 NEW: AI Assistant
+import ChatBot from './components/ChatBot';
+ // 🤖 NEW: AI Assistant
+
+ import Contact from './pages/Contact';
 
 function App() {
   return (
@@ -42,6 +45,7 @@ function App() {
               {/* Private/Protected Routes */}
               <Route path="/admin" element={<Admin />} />
               <Route path="/my-orders" element={<MyOrders />} />
+              <Route path="/contact" element={<Contact />} />
             </Routes>
           </div>
 
