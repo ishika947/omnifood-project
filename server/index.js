@@ -4,11 +4,11 @@ const cors = require('cors');
 
 // --- IMPORT MODELS ---
 const Food = require('./models/Food');
-const Staff = require('./models/staff');
+const Staff = require('./models/Staff');
 const Booking = require('./models/Booking');
 const Customer = require('./models/Customer');
 const Order = require('./models/Order');
-const Table = require('./models/Table'); // NEW: Table Logic
+const Table = require('./models/Table'); // Table Model
 
 const app = express();
 
@@ -17,7 +17,6 @@ app.use(cors());
 app.use(express.json());
 
 // --- DATABASE CONNECTION ---
-// Local MongoDB Connection
 mongoose.connect("mongodb://127.0.0.1:27017/omnifood")
   .then(() => console.log("✅ MongoDB Connected Successfully"))
   .catch((err) => console.log("❌ DB Connection Error:", err));
@@ -41,7 +40,7 @@ app.get('/api/foods', async (req, res) => {
 // Update Special Offer (Admin Feature)
 app.put('/api/foods/special/:id', async (req, res) => {
   try {
-    await Food.updateMany({}, { isSpecialOffer: false }); // Reset others
+    await Food.updateMany({}, { isSpecialOffer: false }); 
     const updatedFood = await Food.findByIdAndUpdate(
       req.params.id, 
       { isSpecialOffer: true }, 
@@ -146,31 +145,39 @@ app.get('/api/orders/:email', async (req, res) => {
   }
 });
 
-// --- 5. ADVANCED TABLE BOOKING (NEW) ---
+// --- 5. ADVANCED TABLE BOOKING (UPDATED FOR ZONES) ---
 
-// A. One-Time Setup: Create Tables (Run /api/setup-tables in browser)
+// A. SETUP TABLES (Must Run Once to Update Categories)
 app.get('/api/setup-tables', async (req, res) => {
   try {
-    const count = await Table.countDocuments();
-    if (count === 0) {
-      const tables = [
-        { tableNo: 1, seats: 2, location: "Window Side" },
-        { tableNo: 2, seats: 2, location: "Window Side" },
-        { tableNo: 3, seats: 4, location: "Center Hall" },
-        { tableNo: 4, seats: 4, location: "Center Hall" },
-        { tableNo: 5, seats: 6, location: "Family Section" },
-        { tableNo: 6, seats: 8, location: "Private VIP Area" },
-      ];
-      await Table.insertMany(tables);
-      return res.send("✅ 6 Restaurant Tables Created Successfully!");
-    }
-    res.send("Tables already exist in database.");
+    // 1. Clear old tables to prevent duplicates/confusion
+    await Table.deleteMany({}); 
+
+    // 2. Insert New Tables with Visual Locations
+    const tables = [
+      // 2 Seaters
+      { tableNo: 1, seats: 2, location: "Window View" },
+      { tableNo: 2, seats: 2, location: "Window View" },
+      { tableNo: 3, seats: 2, location: "Private Booth" },
+      
+      // 4 Seaters
+      { tableNo: 4, seats: 4, location: "Center Hall" },
+      { tableNo: 5, seats: 4, location: "Outdoor Garden" },
+      { tableNo: 6, seats: 4, location: "Outdoor Garden" },
+
+      // 6 Seaters
+      { tableNo: 7, seats: 6, location: "Family Lounge" },
+      { tableNo: 8, seats: 6, location: "Private Booth" }
+    ];
+
+    await Table.insertMany(tables);
+    return res.send("✅ Tables Reset & Updated with Categories (Window, Outdoor, Private)!");
   } catch (err) {
     res.status(500).json(err);
   }
 });
 
-// B. Check Table Status (For Visual Grid)
+// B. Check Table Status (Returns list of available tables)
 app.post('/api/bookings/check-status', async (req, res) => {
   const { date, time } = req.body;
   try {
@@ -199,7 +206,7 @@ app.post('/api/bookings/check-status', async (req, res) => {
   }
 });
 
-// C. Final Booking (With Double-Booking Protection)
+// C. Final Booking API
 app.post('/api/bookings', async (req, res) => {
   try {
     const { tableNo, date, time } = req.body;
