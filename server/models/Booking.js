@@ -1,31 +1,14 @@
 const mongoose = require('mongoose');
 
 const BookingSchema = new mongoose.Schema({
-  // Link this booking to a specific user
-  // user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, 
-  // (We will uncomment the user line later when we add Login system)
-
-  name: { type: String, required: true }, // Customer Name
+  name: { type: String, required: true },
+  email: { type: String, required: true },
   phone: { type: String, required: true },
-  
-  tableNumber: { type: Number, required: true },
-  date: { type: String, required: true }, // YYYY-MM-DD
-  time: { type: String, required: true }, // HH:MM
+  date: { type: String, required: true },
+  time: { type: String, required: true },
   guests: { type: Number, required: true },
-  
-  status: { 
-    type: String, 
-    enum: ['Pending', 'Confirmed', 'Cancelled'], 
-    default: 'Pending' 
-  },
-  
-  // --- UNIQUE FEATURE: Pre-ordering Food ---
-  preOrderItems: [
-    {
-      foodName: { type: String },
-      quantity: { type: Number }
-    }
-  ]
-}, { timestamps: true });
+  tableNo: { type: Number, required: true }, // Yeh line sabse zaroori hai!
+  status: { type: String, default: "Pending" } // Pending, Confirmed, Cancelled
+});
 
 module.exports = mongoose.model('Booking', BookingSchema);

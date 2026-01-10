@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { FaChair, FaCalendarAlt, FaClock, FaCheckCircle, FaTimesCircle, FaBell } from 'react-icons/fa';
+import { FaChair, FaCalendarAlt, FaCheckCircle, FaTimesCircle, FaBell, FaFilter, FaMapMarkerAlt } from 'react-icons/fa';
 
 const BookTable = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1); // Step 1: Date/Time, Step 2: Select Table
+  const [step, setStep] = useState(1);
   
   // Form Data
   const [formData, setFormData] = useState({
@@ -13,10 +13,13 @@ const BookTable = () => {
   });
 
   const [tables, setTables] = useState([]);
+  const [filteredTables, setFilteredTables] = useState([]); // Filtered list ke liye
+  const [selectedCategory, setSelectedCategory] = useState("All"); // 2, 4, 6, or All
+  
   const [loading, setLoading] = useState(false);
   const [waitlistMode, setWaitlistMode] = useState(false);
 
-  // --- STEP 1: LOAD TABLES BASED ON TIME ---
+  // --- STEP 1: LOAD TABLES ---
   const checkAvailability = async (e) => {
     e.preventDefault();
     if (!formData.date || !formData.time) {
@@ -30,165 +33,168 @@ const BookTable = () => {
         date: formData.date,
         time: formData.time
       });
+
+      if (res.data.length === 0) {
+        alert("⚠️ Database empty! Run setup URL first.");
+        setLoading(false);
+        return;
+      }
+
       setTables(res.data);
-      setStep(2); // Move to Table Selection
+      setFilteredTables(res.data); // Shuru mein sab dikhao
+      setStep(2); 
       
-      // Check if ALL tables are booked
       const allFull = res.data.every(t => t.status === "Booked");
-      if (allFull) setWaitlistMode(true);
-      else setWaitlistMode(false);
+      setWaitlistMode(allFull);
 
     } catch (err) {
       console.error(err);
-      alert("Error checking availability");
+      alert("Error connecting to server.");
     } finally {
       setLoading(false);
     }
   };
 
-  // --- STEP 2: SUBMIT BOOKING ---
-  const handleBooking = async () => {
-    if (!formData.tableNo) {
-      alert("Please select a table (Green ones)!");
-      return;
+  // --- FILTER LOGIC (NEW) ---
+  const handleFilter = (seats) => {
+    setSelectedCategory(seats);
+    if (seats === "All") {
+      setFilteredTables(tables);
+    } else {
+      // Filter tables strictly by seat count
+      const filtered = tables.filter(t => t.seats === seats);
+      setFilteredTables(filtered);
     }
+    setFormData({ ...formData, tableNo: null }); // Reset selection when filter changes
+  };
+
+  // --- BOOKING LOGIC ---
+  const handleBooking = async () => {
+    if (!formData.tableNo) return alert("Please select a table!");
 
     try {
       await axios.post('http://localhost:5000/api/bookings', formData);
-      alert(`🎉 Table ${formData.tableNo} Booked Successfully! See you soon.`);
+      alert(`🎉 Table ${formData.tableNo} Booked Successfully!`);
       navigate('/');
     } catch (err) {
-      alert(err.response?.data || "Booking Failed");
-      // Refresh tables if booking failed (maybe someone else took it)
+      alert("Booking Failed! Try again.");
       checkAvailability({ preventDefault: () => {} });
-    }
-  };
-
-  const handleJoinWaitlist = () => {
-    // Basic Waitlist Logic (Simulated)
-    const email = prompt("All tables are full! Enter your email to get notified when a table clears:");
-    if (email) {
-      alert("✅ You are added to the Priority Waitlist! We will email you instantly when a spot opens.");
-      navigate('/');
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 flex justify-center items-center">
-      <div className="bg-white max-w-4xl w-full p-8 rounded-2xl shadow-2xl flex flex-col md:flex-row gap-8">
+      <div className="bg-white max-w-5xl w-full p-8 rounded-2xl shadow-2xl flex flex-col md:flex-row gap-8">
         
-        {/* LEFT: FORM DETAILS */}
+        {/* LEFT: FORM */}
         <div className="md:w-1/3 space-y-4 border-r pr-6">
           <h2 className="text-2xl font-bold text-gray-800">Book A Table</h2>
-          <p className="text-gray-500 text-sm">Select your preferences to see live availability.</p>
+          <p className="text-gray-500 text-sm">Select date & time to find your perfect spot.</p>
           
           <form onSubmit={checkAvailability} className="space-y-3">
             <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1">Date</label>
+              <label className="text-xs font-bold text-gray-600">Date</label>
               <input type="date" required className="w-full border p-2 rounded" 
                 value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1">Time</label>
+              <label className="text-xs font-bold text-gray-600">Time</label>
               <select required className="w-full border p-2 rounded" 
                 value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})}>
                 <option value="">Select Time</option>
                 <option value="12:00">12:00 PM</option>
                 <option value="13:00">01:00 PM</option>
-                <option value="14:00">02:00 PM</option>
                 <option value="19:00">07:00 PM</option>
                 <option value="20:00">08:00 PM</option>
                 <option value="21:00">09:00 PM</option>
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1">Details</label>
-              <input type="text" placeholder="Name" required className="w-full border p-2 rounded mb-2"
-                value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-              <input type="email" placeholder="Email" required className="w-full border p-2 rounded mb-2"
-                value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
-              <input type="tel" placeholder="Phone" required className="w-full border p-2 rounded"
-                value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
-            </div>
+            {/* User details inputs... */}
+            <input type="text" placeholder="Name" required className="w-full border p-2 rounded"
+               value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+            <input type="email" placeholder="Email" required className="w-full border p-2 rounded"
+               value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+            <input type="tel" placeholder="Phone" required className="w-full border p-2 rounded"
+               value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
 
-            <button type="submit" className="w-full bg-black text-white py-3 rounded-lg font-bold hover:bg-gray-800 transition flex justify-center items-center gap-2">
+            <button type="submit" className="w-full bg-black text-white py-3 rounded-lg font-bold hover:bg-gray-800">
               {loading ? "Checking..." : "Check Availability"}
             </button>
           </form>
         </div>
 
-        {/* RIGHT: VISUAL TABLE MAP (MOVIE STYLE) */}
-        <div className="md:w-2/3 flex flex-col justify-center items-center bg-gray-100 rounded-xl p-6 relative">
+        {/* RIGHT: VISUAL MAP WITH FILTERS */}
+        <div className="md:w-2/3 flex flex-col items-center bg-gray-100 rounded-xl p-6 relative min-h-[400px]">
           
           {step === 1 && (
-            <div className="text-center text-gray-400">
+            <div className="text-center text-gray-400 mt-20">
               <FaCalendarAlt className="text-6xl mx-auto mb-4 opacity-20"/>
-              <p>Select Date & Time to view the Layout</p>
+              <p>Select Date & Time to view Layout</p>
             </div>
           )}
 
           {step === 2 && (
             <>
-              <h3 className="text-lg font-bold mb-6 w-full text-left flex justify-between">
-                <span>Select Your Table</span>
-                <span className="text-xs font-normal bg-white px-2 py-1 rounded border flex gap-2">
-                  <span className="flex items-center gap-1"><div className="w-3 h-3 bg-green-500 rounded-full"></div> Free</span>
-                  <span className="flex items-center gap-1"><div className="w-3 h-3 bg-gray-400 rounded-full"></div> Booked</span>
-                  <span className="flex items-center gap-1"><div className="w-3 h-3 bg-orange-500 rounded-full"></div> Selected</span>
-                </span>
-              </h3>
-
-              {/* TABLE GRID */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-8">
-                {tables.map((table) => (
-                  <button
-                    key={table.tableNo}
-                    disabled={table.status === "Booked"}
-                    onClick={() => setFormData({...formData, tableNo: table.tableNo})}
-                    className={`relative w-24 h-24 rounded-2xl flex flex-col justify-center items-center border-4 transition-all transform hover:scale-105 shadow-sm
-                      ${table.status === "Booked" ? "bg-gray-200 border-gray-300 cursor-not-allowed opacity-60" : 
-                        formData.tableNo === table.tableNo ? "bg-orange-100 border-orange-500 text-orange-600 scale-110 shadow-lg" : 
-                        "bg-white border-green-400 hover:bg-green-50 cursor-pointer"}`}
-                  >
-                    <FaChair size={24} className={table.status === "Booked" ? "text-gray-400" : "text-gray-700"} />
-                    <span className="font-bold mt-1 text-sm">T-{table.tableNo}</span>
-                    <span className="text-[10px] text-gray-500">{table.seats} Seats</span>
-                    
-                    {/* Status Label (If Full) */}
-                    {table.status === "Booked" && (
-                       <span className="absolute -top-3 -right-3 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full shadow">
-                         FULL
-                       </span>
-                    )}
-                  </button>
-                ))}
+              {/* --- NEW: FILTER BUTTONS --- */}
+              <div className="flex flex-wrap gap-2 mb-6 bg-white p-2 rounded-full shadow-sm">
+                <button onClick={() => handleFilter("All")} className={`px-4 py-1 rounded-full text-sm font-bold ${selectedCategory === "All" ? "bg-black text-white" : "text-gray-600 hover:bg-gray-100"}`}>All</button>
+                <button onClick={() => handleFilter(2)} className={`px-4 py-1 rounded-full text-sm font-bold ${selectedCategory === 2 ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}>2 Seater</button>
+                <button onClick={() => handleFilter(4)} className={`px-4 py-1 rounded-full text-sm font-bold ${selectedCategory === 4 ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}>4 Seater</button>
+                <button onClick={() => handleFilter(6)} className={`px-4 py-1 rounded-full text-sm font-bold ${selectedCategory === 6 ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}>Family (6+)</button>
               </div>
 
-              {/* ACTION BUTTONS */}
-              {waitlistMode ? (
-                <div className="text-center space-y-3">
-                   <p className="text-red-500 font-bold flex items-center justify-center gap-2">
-                     <FaTimesCircle/> All tables are full at this time.
-                   </p>
-                   <button onClick={handleJoinWaitlist} className="bg-blue-600 text-white px-6 py-3 rounded-full font-bold hover:bg-blue-700 animate-pulse flex items-center gap-2 mx-auto">
-                     <FaBell/> Notify Me When Available
-                   </button>
-                </div>
-              ) : (
+              {/* TABLE GRID */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6 w-full">
+                {filteredTables.length > 0 ? (
+                  filteredTables.map((table) => (
+                    <button
+                      key={table.tableNo}
+                      disabled={table.status === "Booked"}
+                      onClick={() => setFormData({...formData, tableNo: table.tableNo, guests: table.seats})}
+                      className={`relative h-28 rounded-2xl flex flex-col justify-center items-center border-2 transition-all shadow-sm
+                        ${table.status === "Booked" ? "bg-gray-200 border-gray-300 opacity-50 cursor-not-allowed" : 
+                          formData.tableNo === table.tableNo ? "bg-orange-100 border-orange-600 ring-2 ring-orange-600 scale-105" : 
+                          "bg-white border-gray-200 hover:border-blue-400 hover:shadow-md"}`}
+                    >
+                      {/* Location Badge (Window/Private) */}
+                      <span className="absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wide text-gray-400 bg-gray-100 px-1 rounded">
+                         {table.location || "General"}
+                      </span>
+
+                      <div className="flex items-center gap-1 mt-2">
+                        <FaChair className={table.status === "Booked" ? "text-gray-400" : "text-gray-700"} />
+                        <span className="font-bold text-lg">T-{table.tableNo}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+                        <FaMapMarkerAlt size={10}/> {table.seats} Seats
+                      </div>
+
+                      {table.status === "Booked" && (
+                         <span className="absolute inset-0 flex items-center justify-center bg-gray-500/10 rounded-2xl font-bold text-red-600 text-xs rotate-12">BOOKED</span>
+                      )}
+                    </button>
+                  ))
+                ) : (
+                  <p className="col-span-3 text-center text-gray-400 mt-10">No tables found for {selectedCategory} people.</p>
+                )}
+              </div>
+
+              {/* CONFIRM BUTTON */}
+              {!waitlistMode && (
                 <button 
                   onClick={handleBooking} 
                   disabled={!formData.tableNo}
-                  className={`w-full py-3 rounded-xl font-bold text-white transition shadow-lg ${
+                  className={`mt-8 w-full py-4 rounded-xl font-bold text-white transition shadow-lg ${
                     formData.tableNo ? "bg-orange-600 hover:bg-orange-700" : "bg-gray-300 cursor-not-allowed"
                   }`}
                 >
-                  Confirm Booking (Table {formData.tableNo || "?"})
+                  {formData.tableNo ? `Confirm Table ${formData.tableNo} (${formData.guests} Guests)` : "Select a Table to Proceed"}
                 </button>
               )}
             </>
           )}
         </div>
-
       </div>
     </div>
   );

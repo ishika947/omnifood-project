@@ -7,7 +7,8 @@ const Food = require('./models/Food');
 const Staff = require('./models/staff');
 const Booking = require('./models/Booking');
 const Customer = require('./models/Customer');
-const Order = require('./models/Order'); // NEW: Order Model
+const Order = require('./models/Order');
+const Table = require('./models/Table'); // NEW: Table Logic
 
 const app = express();
 
@@ -16,7 +17,7 @@ app.use(cors());
 app.use(express.json());
 
 // --- DATABASE CONNECTION ---
-// Using Direct Local Link
+// Local MongoDB Connection
 mongoose.connect("mongodb://127.0.0.1:27017/omnifood")
   .then(() => console.log("✅ MongoDB Connected Successfully"))
   .catch((err) => console.log("❌ DB Connection Error:", err));
@@ -40,10 +41,7 @@ app.get('/api/foods', async (req, res) => {
 // Update Special Offer (Admin Feature)
 app.put('/api/foods/special/:id', async (req, res) => {
   try {
-    // Reset all offers first
-    await Food.updateMany({}, { isSpecialOffer: false });
-    
-    // Set new offer
+    await Food.updateMany({}, { isSpecialOffer: false }); // Reset others
     const updatedFood = await Food.findByIdAndUpdate(
       req.params.id, 
       { isSpecialOffer: true }, 
@@ -57,7 +55,7 @@ app.put('/api/foods/special/:id', async (req, res) => {
 
 // --- 2. CUSTOMER ROUTES ---
 
-// Customer Signup
+// Signup
 app.post('/api/customer/register', async (req, res) => {
   try {
     const newCustomer = new Customer(req.body);
@@ -68,7 +66,7 @@ app.post('/api/customer/register', async (req, res) => {
   }
 });
 
-// Customer Login
+// Login
 app.post('/api/customer/login', async (req, res) => {
   try {
     const user = await Customer.findOne({ email: req.body.email });
@@ -90,7 +88,6 @@ app.post('/api/staff/login', async (req, res) => {
     if (!user || user.password !== req.body.password) {
       return res.status(400).json("Invalid Username or Password!");
     }
-    // Update Attendance Time
     user.lastLogin = Date.now();
     await user.save();
     
@@ -104,7 +101,7 @@ app.post('/api/staff/login', async (req, res) => {
   }
 });
 
-// Get All Staff (For Admin Dashboard)
+// Get All Staff
 app.get('/api/staff', async (req, res) => {
   try {
     const staffMembers = await Staff.find();
@@ -114,7 +111,7 @@ app.get('/api/staff', async (req, res) => {
   }
 });
 
-// Create New Staff (Manager Action)
+// Create Staff
 app.post('/api/staff/create', async (req, res) => {
   try {
     const newStaff = new Staff(req.body);
@@ -125,24 +122,23 @@ app.post('/api/staff/create', async (req, res) => {
   }
 });
 
-// --- 4. ORDER ROUTES (UPDATED) ---
+// --- 4. ORDER ROUTES ---
 
-// Place New Order (Save to DB)
+// Place Order
 app.post('/api/orders', async (req, res) => {
   try {
     const newOrder = new Order(req.body);
     const savedOrder = await newOrder.save();
-    console.log("📦 Order Saved to DB:", savedOrder._id);
+    console.log("📦 Order Saved:", savedOrder._id);
     res.status(201).json(savedOrder);
   } catch (error) {
     res.status(500).json(error);
   }
 });
 
-// Get Orders by Customer Email (For 'My Orders' Page)
+// Get Order History
 app.get('/api/orders/:email', async (req, res) => {
   try {
-    // Find orders for this email and sort by latest date
     const orders = await Order.find({ customerEmail: req.params.email }).sort({ date: -1 });
     res.json(orders);
   } catch (error) {
@@ -150,11 +146,70 @@ app.get('/api/orders/:email', async (req, res) => {
   }
 });
 
-// --- 5. BOOKING ROUTES ---
+// --- 5. ADVANCED TABLE BOOKING (NEW) ---
 
-// Book a Table
+// A. One-Time Setup: Create Tables (Run /api/setup-tables in browser)
+app.get('/api/setup-tables', async (req, res) => {
+  try {
+    const count = await Table.countDocuments();
+    if (count === 0) {
+      const tables = [
+        { tableNo: 1, seats: 2, location: "Window Side" },
+        { tableNo: 2, seats: 2, location: "Window Side" },
+        { tableNo: 3, seats: 4, location: "Center Hall" },
+        { tableNo: 4, seats: 4, location: "Center Hall" },
+        { tableNo: 5, seats: 6, location: "Family Section" },
+        { tableNo: 6, seats: 8, location: "Private VIP Area" },
+      ];
+      await Table.insertMany(tables);
+      return res.send("✅ 6 Restaurant Tables Created Successfully!");
+    }
+    res.send("Tables already exist in database.");
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
+
+// B. Check Table Status (For Visual Grid)
+app.post('/api/bookings/check-status', async (req, res) => {
+  const { date, time } = req.body;
+  try {
+    // 1. Find Booked Tables for this Slot
+    const bookedTables = await Booking.find({ 
+      date: date, 
+      time: time,
+      status: { $ne: "Cancelled" } 
+    }).select('tableNo');
+
+    const bookedTableNumbers = bookedTables.map(b => b.tableNo);
+
+    // 2. Get All Tables & Mark Status
+    const allTables = await Table.find().sort({ tableNo: 1 });
+    const tableStatus = allTables.map(table => {
+      const isBooked = bookedTableNumbers.includes(table.tableNo);
+      return {
+        ...table._doc,
+        status: isBooked ? "Booked" : "Available"
+      };
+    });
+
+    res.json(tableStatus);
+  } catch (error) {
+    res.status(500).json("Error checking tables");
+  }
+});
+
+// C. Final Booking (With Double-Booking Protection)
 app.post('/api/bookings', async (req, res) => {
   try {
+    const { tableNo, date, time } = req.body;
+    
+    // Safety Check: Is it still free?
+    const existing = await Booking.findOne({ tableNo, date, time, status: { $ne: "Cancelled" } });
+    if (existing) {
+      return res.status(400).json("⚠️ Sorry! This table was just booked by someone else.");
+    }
+
     const newBooking = new Booking(req.body);
     const savedBooking = await newBooking.save();
     res.status(201).json(savedBooking);
